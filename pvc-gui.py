@@ -1,7 +1,12 @@
+#!/usr/bin/env python3
+
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 import sys
 import pickle
+import os
+import subprocess, shlex
+import playlistmaker
 
 
 class PvcGui(QDialog):
@@ -22,22 +27,35 @@ class PvcGui(QDialog):
         self.audioDecks.addItems(['1', '2', '3'])
         self.audioDecks.setCurrentIndex(1)
 
+        # Medium
+        self.medium = QComboBox()
+        mediumLabel = QLabel('Medium')
+        self.medium.addItems(['serato_2a', 'serato_2b', 'mixvibes'])
+
         audioBox = QVBoxLayout()
         audioAPI = QHBoxLayout()
         audioAPI.addWidget(audioLabel)
         audioAPI.addWidget(self.audioComboBox)
+        mediumBox = QHBoxLayout()
+        mediumBox.addWidget(mediumLabel)
+        mediumBox.addWidget(self.medium)
         audioDecksBox = QHBoxLayout()
         audioDecksBox.addWidget(audioDecksLabel)
         audioDecksBox.addWidget(self.audioDecks)
         audioBox.addLayout(audioAPI)
+        audioBox.addLayout(mediumBox)
         audioBox.addLayout(audioDecksBox)
 
         # 33 45
         self.speed = QCheckBox('45 rpm')
         self.speed.setChecked(True)
 
+        self.locking = QCheckBox('Deck Locking')
+        self.locking.setChecked(True)
+
         secondBox = QHBoxLayout()
         secondBox.addWidget(self.speed)
+        secondBox.addWidget(self.locking)
 
         # Buttons
         start = QPushButton('Start xwax')
@@ -51,6 +69,8 @@ class PvcGui(QDialog):
         playlistsLabel = QLabel('Playlists')
         playlistAppenButton = QPushButton('Add Playlist')
         playlistAppenButton.clicked.connect(self.fileSelection)
+        playlistCreateBuutton = QPushButton('Create Playlist')
+        playlistCreateBuutton.clicked.connect(self.playlistCreator)
         playlistDeleteButton = QPushButton('Delete Playlist')
         playlistDeleteButton.clicked.connect(self.playlistDelete)
 
@@ -58,6 +78,7 @@ class PvcGui(QDialog):
         playlistsBox.addWidget(playlistsLabel)
         playlistsBox.addWidget(self.playlistsList)
         playlistsBox.addWidget(playlistAppenButton)
+        playlistsBox.addWidget(playlistCreateBuutton)
         playlistsBox.addWidget(playlistDeleteButton)
 
         settingsLayout = QVBoxLayout()
@@ -91,6 +112,11 @@ class PvcGui(QDialog):
             self.playlists = pickle.load(file)
         self.updatePlaylistsList()
 
+    def playlistCreator(self):
+        self.playlistMaker = playlistmaker.PlaylistMaker()
+        self.playlistMaker.show()
+
+
     def updatePlaylistsList(self):
         self.playlistsList.clear()
         for i in self.playlists:
@@ -109,8 +135,12 @@ class PvcGui(QDialog):
             rpm = '-45'
         else:
             rpm = '-33'
+        
+        if self.locking.isChecked():
+            lock = '-c'
+        else:
+            lock = 'u'
 
-        print(self.audioComboBox.currentText())
         if self.audioComboBox.currentText() == 'Jack':
             if self.audioDecks.currentIndex() == 0:
                 api = '-j deckA'
@@ -121,7 +151,14 @@ class PvcGui(QDialog):
         else:
             print('ALSA')
         
-        print('xwax', rpm, api)
+        runPlaylists = []
+        for i in self.playlistsList.selectedItems():
+            runPlaylists.append('-l')
+            runPlaylists.append(i.text())
+        
+        startcmd = "xwax {} {} {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
+        print(startcmd)
+
 
 
 if __name__ == '__main__':

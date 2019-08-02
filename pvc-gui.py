@@ -116,7 +116,6 @@ class PvcGui(QDialog):
         self.playlistMaker = playlistmaker.PlaylistMaker()
         self.playlistMaker.show()
 
-
     def updatePlaylistsList(self):
         self.playlistsList.clear()
         for i in self.playlists:

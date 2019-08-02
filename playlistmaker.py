@@ -20,16 +20,23 @@ class PlaylistMaker(QDialog):
     def __init__(self):
         super(PlaylistMaker, self).__init__()
 
-        test = QLabel('Work in Progress ;)')
+        test = QLabel('Select audiofiles that you want to convert into a xwax-readable playlist!')
         tunaButton = QPushButton('Select Tunas')
         tunaButton.clicked.connect(self.tunaSelector)
+        tunaRemover = QPushButton('Remove Tunas')
+        tunaRemover.clicked.connect(self.tunaDeleter)
+        commitButton = QPushButton('Create Playlist')
+        commitButton.clicked.connect(self.writePlaylist)
 
         self.tunaList = QListWidget()
+        self.tunaList.setSelectionMode(QAbstractItemView.MultiSelection)
 
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(test)
         layout.addWidget(tunaButton)
+        layout.addWidget(tunaRemover)
+        layout.addWidget(commitButton)
         layout.addWidget(self.tunaList)
 
         self.setLayout(layout)
@@ -39,16 +46,36 @@ class PlaylistMaker(QDialog):
         self.tunaSelect = QFileDialog()
         self.tunas = self.tunaSelect.getOpenFileNames()
         self.tunaList.addItems(self.tunas[0])        
-        self.tunaPreparator(self.tunas[0][0])
+
+    def tunaDeleter(self):
+        tunas = [x.row() for x in self.tunaList.selectedIndexes()]
+        for i in tunas:
+            print(i)
+            self.tunaList.takeItem(i)
 
     def tunaPreparator(self, filepath):
         self.audiofile = eyed3.load(filepath)
-        print(self.audiofile.tag.artist)
-        print(self.audiofile.tag.title)
-        print(self.audiofile.tag.comments[0].text) # <<- that's weird, isn't it?!
-        
+        artistTag = self.audiofile.tag.artist
+        titleTag = self.audiofile.tag.title
+        commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
+        string = filepath + "\t" + commentTag + "   " + artistTag + "\t" + titleTag
+        return string
 
-        # print('\n'.join(self.tunas[0]))
+    def writePlaylist(self):
+
+        filename, other_crap = QFileDialog().getSaveFileName()
+
+        for i in range(0, self.tunaList.count()):
+            self.tunaList.item(i).setSelected(True)
+
+        writeStuff = [x.text() for x in self.tunaList.selectedItems()]
+        for i, j in enumerate(writeStuff):
+            writeStuff[i] = self.tunaPreparator(j)
+        writeStuff.append('')
+        writeStuff = '\n'.join(writeStuff)
+        
+        with open(filename, 'w') as file:
+            file.write(writeStuff)
 
 
 if __name__ == '__main__':

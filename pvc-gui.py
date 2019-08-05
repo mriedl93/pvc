@@ -2,11 +2,13 @@
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-import sys
+from PyQt5.QtGui import *
+import sys, re
 import pickle
 import os
 import subprocess, shlex
 import playlistmaker
+from functools import partial
 
 
 class PvcGui(QDialog):
@@ -19,7 +21,7 @@ class PvcGui(QDialog):
 
         # Audio API
         self.audioComboBox = QComboBox()
-        self.audioComboBox.addItems(['Jack', 'ALSA'])
+        self.audioComboBox.addItems(['Jack', 'ALSA', 'Dummy'])
         audioLabel = QLabel('Audio API')
         audioLabel.setBuddy(self.audioComboBox)
         audioDecksLabel = QLabel('Nr. of Decks')
@@ -46,6 +48,13 @@ class PvcGui(QDialog):
         audioBox.addLayout(mediumBox)
         audioBox.addLayout(audioDecksBox)
 
+        # THRU
+        self.thruLabel = QLabel('THRU Switch\nfor Traktro Audio 6')
+        self.channelAThru = QPushButton('THRU A')
+        self.channelAThru.clicked.connect(partial(self.thruSwitch, 'a'))
+        self.channelBThru = QPushButton('THRU B')
+        self.channelBThru.clicked.connect(partial(self.thruSwitch, 'b'))
+
         # 33 45
         self.speed = QCheckBox('45 rpm')
         self.speed.setChecked(True)
@@ -63,10 +72,32 @@ class PvcGui(QDialog):
         thirdBox = QVBoxLayout()
         thirdBox.addWidget(start)
 
+        #thruBox = QGroupBox("THRU on Traktor Audio 6")
+        thruBox2 = QHBoxLayout()
+        thruBox2.addWidget(self.channelAThru)
+        thruBox2.addWidget(self.channelBThru)
+        if self.checkThruState('a'):
+            channelAState = QLabel("CHANNEL A THRU")
+        else:
+            channelAState = QLabel("")
+        if self.checkThruState('b'):
+            channelBState = QLabel("CHANNEL B THRU")
+        else:
+            channelBState = QLabel("")
+        thruBox3 = QHBoxLayout()
+        thruBox3.addWidget(channelAState)
+        thruBox3.addWidget(channelBState)
+        thruBox4 = QVBoxLayout()
+        thruBox4.addStretch()
+        thruBox4.addLayout(thruBox3)
+        thruBox4.addLayout(thruBox2)
+        # thruBox.setLayout(thruBox4)
+        #thruBox.setAlignment(Qt.AlignTop)
+
         # Playlists
         self.playlistsList = QListWidget()
         self.playlistsList.setSelectionMode(QAbstractItemView.MultiSelection)
-        playlistsLabel = QLabel('Playlists')
+        playlistsLabel = QLabel('Select playlists')
         playlistAppenButton = QPushButton('Add Playlist')
         playlistAppenButton.clicked.connect(self.fileSelection)
         playlistCreateBuutton = QPushButton('Create Playlist')
@@ -90,6 +121,7 @@ class PvcGui(QDialog):
         layout.addLayout(settingsLayout, 0, 0)
         layout.addLayout(thirdBox, 0, 1)
         layout.addLayout(playlistsBox, 1, 0)
+        layout.addLayout(thruBox4, 1, 1)
 
         start.clicked.connect(self.run)
         self.playlistLoad()
@@ -111,6 +143,9 @@ class PvcGui(QDialog):
         with open('config.pkl', 'rb') as file:
             self.playlists = pickle.load(file)
         self.updatePlaylistsList()
+        for i in range(0, self.playlistsList.count()):
+            self.playlistsList.item(i).setSelected(True)
+
 
     def playlistCreator(self):
         self.playlistMaker = playlistmaker.PlaylistMaker()
@@ -127,6 +162,41 @@ class PvcGui(QDialog):
             self.playlists.pop(i)
         self.writeConfig()
         self.updatePlaylistsList()
+
+    def thruSwitch(self, channel):
+        """ Switches THRU to channel for Traktor Audio 6 """
+        try:
+            print("{} clicked".format(channel))
+
+            thru_active, output = self.checkThruState(channel)
+            if thru_active:
+                switch = 'off'
+            else:
+                switch = 'on'
+
+            subprocess.call(["amixer", "-c", "T6", "cset", "numid={}".format(output), switch])
+            print("Switching THRU on Channel {0} {1}".format(channel.upper(), switch))
+        except:
+            print("Couldn't switch THRU")
+
+    def checkThruState(self, channel):
+        try:
+            """ Checks the state of THRU for channel on Traktor Audio 6 """
+            amixer = subprocess.Popen(['amixer', '-c', 'T6', 'controls'], stdout=subprocess.PIPE)
+            grep = subprocess.Popen(["grep", "'Direct Thru Channel {}'".format(channel)], stdin=amixer.stdout, stdout=subprocess.PIPE)
+            cut = subprocess.Popen(["cut", "-d", ",", "-f", "1"], stdin=grep.stdout, stdout=subprocess.PIPE)
+            output = subprocess.check_output(["cut", "-d", "=", "-f", "2"], stdin=cut.stdout)
+            output = str(output)[2]
+
+            am_status = subprocess.Popen(["amixer", "-c", "T6", "scontents"], stdout=subprocess.PIPE)
+            grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel)], stdin=am_status.stdout)
+
+            thru_active = re.search("\[on\]", str(grep2))  # returns boolean
+            
+            return [thru_active, output]
+        except:
+            print("No Soundcard found!")
+
 
     def run(self):
         
@@ -147,6 +217,8 @@ class PvcGui(QDialog):
                 api = '-j deckA -j deckB'
             else:
                 api = '-j deckA -j deckB -j deckC'
+        elif self.audioComboBox.currentText() == 'Dummy':
+            api = '--dummy'
         else:
             print('ALSA')
         
@@ -155,9 +227,9 @@ class PvcGui(QDialog):
             runPlaylists.append('-l')
             runPlaylists.append(i.text())
         
-        startcmd = "xwax {} {} {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
+        startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
         print(startcmd)
-
+        subprocess.call(shlex.split(startcmd))
 
 
 if __name__ == '__main__':

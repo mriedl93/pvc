@@ -25,8 +25,10 @@ class PlaylistMaker(QDialog):
         tunaButton.clicked.connect(self.tunaSelector)
         tunaRemover = QPushButton('Remove Tunas')
         tunaRemover.clicked.connect(self.tunaDeleter)
-        commitButton = QPushButton('Create Playlist')
+        commitButton = QPushButton('Save Playlist')
         commitButton.clicked.connect(self.writePlaylist)
+        loadButton = QPushButton('Load Playlist')
+        loadButton.clicked.connect(self.loadPlaylist)
 
         self.tunaList = QListWidget()
         self.tunaList.setSelectionMode(QAbstractItemView.MultiSelection)
@@ -37,6 +39,7 @@ class PlaylistMaker(QDialog):
         layout.addWidget(tunaButton)
         layout.addWidget(tunaRemover)
         layout.addWidget(commitButton)
+        layout.addWidget(loadButton)
         layout.addWidget(self.tunaList)
 
         self.setLayout(layout)
@@ -54,10 +57,16 @@ class PlaylistMaker(QDialog):
             self.tunaList.takeItem(i)
 
     def tunaPreparator(self, filepath):
-        self.audiofile = eyed3.load(filepath)
-        artistTag = self.audiofile.tag.artist
-        titleTag = self.audiofile.tag.title
-        commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
+        if filepath.endswith(".mp3"):
+            self.audiofile = eyed3.load(filepath)
+            artistTag = self.audiofile.tag.artist
+            titleTag = self.audiofile.tag.title
+            commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
+        elif filepath.endswith(".wav"):
+            filename = filepath.split("/")[-1].split(".w")[0]
+            artistTag = filename.split(" - ")[0]
+            titleTag = filename.split(" - ")[1]
+            commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
         string = filepath + "\t" + commentTag + "   " + artistTag + "\t" + titleTag
         return string
 
@@ -72,11 +81,21 @@ class PlaylistMaker(QDialog):
         for i, j in enumerate(writeStuff):
             writeStuff[i] = self.tunaPreparator(j)
         writeStuff.append('')
-        writeStuff = '\n'.join(writeStuff)
         
         with open(filename, 'w') as file:
-            file.write(writeStuff)
+            file.write('\n'.join(writeStuff))
+    
+    def loadPlaylist(self):
 
+        filename, other_crap = QFileDialog().getOpenFileName()
+
+        self.tunaList.clear()
+
+        with open(filename, 'r') as file:
+            playlist = file.readlines()
+
+        for i in playlist:
+            self.tunaList.addItem(i.split('\t')[0])
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

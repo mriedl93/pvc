@@ -30,6 +30,29 @@ class PlaylistMaker(QDialog):
         loadButton = QPushButton('Load Playlist')
         loadButton.clicked.connect(self.loadPlaylist)
 
+        label = "  Structure\n\
+                %C = Comment Tag\n\
+                %A = Artist Tag\n\
+                %T = Title Tag"
+
+        self.structureLabel = QLabel(label)
+        self.structureBox1Label = QLabel('Left Column')
+        self.structureBox2Label = QLabel('Right Column')
+        self.structureBox1 = QLineEdit("%A")
+        self.structureBox2 = QLineEdit("%T")
+        self.structureBoxLabelBox = QHBoxLayout()
+        self.structureBoxLabelBox.addWidget(self.structureBox1Label)
+        self.structureBoxLabelBox.addWidget(self.structureBox2Label)
+        self.structureBox3 = QHBoxLayout()
+        self.structureBox3.addWidget(self.structureBox1)
+        self.structureBox3.addWidget(self.structureBox2)
+        self.structureBox4 = QVBoxLayout()
+        self.structureBox4.addLayout(self.structureBoxLabelBox)
+        self.structureBox4.addLayout(self.structureBox3)
+        self.structureBox5 = QVBoxLayout()
+        self.structureBox5.addWidget(self.structureLabel)
+        self.structureBox5.addLayout(self.structureBox4)
+
         self.tunaList = QListWidget()
         self.tunaList.setSelectionMode(QAbstractItemView.MultiSelection)
 
@@ -40,6 +63,7 @@ class PlaylistMaker(QDialog):
         layout.addWidget(tunaRemover)
         layout.addWidget(commitButton)
         layout.addWidget(loadButton)
+        layout.addLayout(self.structureBox5)
         layout.addWidget(self.tunaList)
 
         self.setLayout(layout)
@@ -67,7 +91,34 @@ class PlaylistMaker(QDialog):
             artistTag = filename.split(" - ")[0]
             titleTag = filename.split(" - ")[1]
             commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
-        string = filepath + "\t" + commentTag + "   " + artistTag + "\t" + titleTag
+        
+        firstColumn = []
+        firstBoxSplitted = self.structureBox1.displayText().split('%')
+
+        for i in firstBoxSplitted:
+            if i == '':
+                continue
+            elif i[0] == 'C':
+                firstColumn.append(i.replace('C', '{}'.format(commentTag)))
+            elif i[0] == 'A':
+                firstColumn.append(i.replace('A', '{}'.format(artistTag)))
+            elif i[0] == 'T':
+                firstColumn.append(i.replace('T', '{}'.format(titleTag)))
+
+        secondColumn = []
+        secondBoxSplitted = self.structureBox2.displayText().split('%')
+        
+        for i in secondBoxSplitted:
+            if i == '':
+                continue
+            elif i[0] == 'C':
+                secondColumn.append(i.replace('C', '{}'.format(commentTag)))
+            elif i[0] == 'A':
+                secondColumn.append(i.replace('A', '{}'.format(artistTag)))
+            elif i[0] == 'T':
+                secondColumn.append(i.replace('T', '{}'.format(titleTag)))
+            
+        string = filepath + "\t" + ''.join(firstColumn) + "\t" + ''.join(secondColumn)
         return string
 
     def writePlaylist(self):

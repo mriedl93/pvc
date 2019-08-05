@@ -32,7 +32,7 @@ class PvcGui(QDialog):
         # Medium
         self.medium = QComboBox()
         mediumLabel = QLabel('Medium')
-        self.medium.addItems(['serato_2a', 'serato_2b', 'mixvibes'])
+        self.medium.addItems(['serato_2a', 'serato_2b', 'serato_cd', 'traktor_a', 'traktor_b', 'mixvibes_v2', 'mixvibes_7inch'])
 
         audioBox = QVBoxLayout()
         audioAPI = QHBoxLayout()
@@ -68,9 +68,11 @@ class PvcGui(QDialog):
 
         # Buttons
         start = QPushButton('Start xwax')
+        verbose = QPushButton('Show Command')
 
         thirdBox = QVBoxLayout()
         thirdBox.addWidget(start)
+        thirdBox.addWidget(verbose)
 
         #thruBox = QGroupBox("THRU on Traktor Audio 6")
         thruBox2 = QHBoxLayout()
@@ -116,14 +118,23 @@ class PvcGui(QDialog):
         settingsLayout.addLayout(audioBox)
         settingsLayout.addLayout(secondBox)
 
+        self.startupcmd = QLineEdit()
+        self.startupcmd.setReadOnly(True)
+        self.startupcmdLabel = QLabel('Generated Startup Command')
+        self.startupcmdBox = QVBoxLayout()
+        self.startupcmdBox.addWidget(self.startupcmdLabel)
+        self.startupcmdBox.addWidget(self.startupcmd)
+
         # Main Layout
         layout = QGridLayout()
         layout.addLayout(settingsLayout, 0, 0)
         layout.addLayout(thirdBox, 0, 1)
         layout.addLayout(playlistsBox, 1, 0)
         layout.addLayout(thruBox4, 1, 1)
+        layout.addLayout(self.startupcmdBox, 2, 0, 1, 2)
 
         start.clicked.connect(self.run)
+        verbose.clicked.connect(partial(self.run, True))
         self.playlistLoad()
         self.setLayout(layout)
         self.setWindowTitle('pvc - Simple xwax starterscript - GUI Version')
@@ -167,8 +178,6 @@ class PvcGui(QDialog):
     def thruSwitch(self, channel):
         """ Switches THRU to channel for Traktor Audio 6 """
         try:
-            print("{} clicked".format(channel))
-
             thru_active, output = self.checkThruState(channel)
             if thru_active:
                 switch = 'off'
@@ -199,7 +208,7 @@ class PvcGui(QDialog):
             print("No Soundcard found!")
 
 
-    def run(self):
+    def run(self, verbose=False):
         
         if self.speed.isChecked():
             rpm = '-45'
@@ -209,7 +218,7 @@ class PvcGui(QDialog):
         if self.locking.isChecked():
             lock = '-c'
         else:
-            lock = 'u'
+            lock = '-u'
 
         if self.audioComboBox.currentText() == 'Jack':
             if self.audioDecks.currentIndex() == 0:
@@ -229,8 +238,12 @@ class PvcGui(QDialog):
             runPlaylists.append(i.text())
         
         startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
-        print(startcmd)
-        subprocess.Popen(shlex.split(startcmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if verbose:
+            self.startupcmd.setText(startcmd)
+        else:
+            self.startupcmd.setText(startcmd)
+            subprocess.Popen(shlex.split(startcmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
 
 
 if __name__ == '__main__':

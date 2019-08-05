@@ -230,7 +230,7 @@ class PvcGui(QDialog):
         
         startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
         print(startcmd)
-        subprocess.call(shlex.split(startcmd))
+        subprocess.Popen(shlex.split(startcmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
 if __name__ == '__main__':

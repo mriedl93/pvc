@@ -184,13 +184,13 @@ class PvcGui(QDialog):
         try:
             """ Checks the state of THRU for channel on Traktor Audio 6 """
             amixer = subprocess.Popen(['amixer', '-c', 'T6', 'controls'], stdout=subprocess.PIPE)
-            grep = subprocess.Popen(["grep", "'Direct Thru Channel {}'".format(channel)], stdin=amixer.stdout, stdout=subprocess.PIPE)
+            grep = subprocess.Popen(["grep", "'Direct Thru Channel {}'".format(channel.upper())], stdin=amixer.stdout, stdout=subprocess.PIPE)
             cut = subprocess.Popen(["cut", "-d", ",", "-f", "1"], stdin=grep.stdout, stdout=subprocess.PIPE)
             output = subprocess.check_output(["cut", "-d", "=", "-f", "2"], stdin=cut.stdout)
             output = str(output)[2]
 
             am_status = subprocess.Popen(["amixer", "-c", "T6", "scontents"], stdout=subprocess.PIPE)
-            grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel)], stdin=am_status.stdout)
+            grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel.upper()], stdin=am_status.stdout)
 
             thru_active = re.search("\[on\]", str(grep2))  # returns boolean
             

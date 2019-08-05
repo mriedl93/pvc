@@ -140,8 +140,9 @@ class PvcGui(QDialog):
             pickle.dump(self.playlists, file)
 
     def playlistLoad(self):
-        with open('config.pkl', 'rb') as file:
-            self.playlists = pickle.load(file)
+        if os.path.exists('config.pkl'):
+            with open('config.pkl', 'rb') as file:
+                self.playlists = pickle.load(file)
         self.updatePlaylistsList()
         for i in range(0, self.playlistsList.count()):
             self.playlistsList.item(i).setSelected(True)

@@ -190,7 +190,7 @@ class PvcGui(QDialog):
             output = str(output)[2]
 
             am_status = subprocess.Popen(["amixer", "-c", "T6", "scontents"], stdout=subprocess.PIPE)
-            grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel.upper()], stdin=am_status.stdout)
+            grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel.upper())], stdin=am_status.stdout)
 
             thru_active = re.search("\[on\]", str(grep2))  # returns boolean
             

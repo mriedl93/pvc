@@ -1,7 +1,7 @@
 # pvc
 **p**oly**v**inly**c**hloride - the stuff our beloved music discs are made of <3
 
-Two simple Python programs for an easy start-up of xwax - a vinyl emulation software for linux DJs.  
+Two simple Python programs for an easy start-up of [xwax](http://xwax.org/) - a vinyl emulation software for linux DJs.  
 Plus: A stand-alone playlist-creation program.
 
 This is basically a project that I used to learn some new concepts of programming, especially GUI-Programming. Don't expect a professional software for all your needs!

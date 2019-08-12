@@ -28,7 +28,7 @@ class PvcGui(QDialog):
         self.audioDecksLabel = QLabel('Nr. of Decks')
         self.audioDecksSelection = QComboBox()
         self.audioDecksSelection.addItems(['1', '2', '3'])
-        self.audioDecksSelection.setCurrentIndex(1)
+        #self.audioDecksSelection.setCurrentIndex(1)
         self.audioDecksSelection.currentIndexChanged.connect(self.audioHWField)
 
         self.audioCardLayout = QHBoxLayout()
@@ -84,10 +84,12 @@ class PvcGui(QDialog):
 
         # Buttons
         start = QPushButton('Start xwax')
+        save = QPushButton('Save Settings')
         verbose = QPushButton('Show Command')
 
         thirdBox = QVBoxLayout()
         thirdBox.addWidget(start)
+        thirdBox.addWidget(save)
         thirdBox.addWidget(verbose)
 
         #thruBox = QGroupBox("THRU on Traktor Audio 6")
@@ -151,8 +153,9 @@ class PvcGui(QDialog):
 
         self.audioHWField()
         start.clicked.connect(self.run)
+        save.clicked.connect(self.configWrite)
         verbose.clicked.connect(partial(self.run, True))
-        self.playlistLoad()
+        self.configLoad()
         self.setLayout(layout)
         self.setWindowTitle('pvc - Simple xwax starterscript - GUI Version')
 
@@ -161,17 +164,54 @@ class PvcGui(QDialog):
         self.file = fileDialoge.getOpenFileName(self, 'Open File', '/home/markus/Musik')
         self.playlistsList.addItem(self.file[0])
         self.playlists.append(self.file[0])
-        self.writeConfig() 
+        self.configWrite() 
 
-    def writeConfig(self):
+    def configWrite(self):
+        config = {'medium': self.mediumSelection.currentIndex(),
+                'api': self.audioAPISelection.currentIndex(),
+                'hw-devices': [self.audioCard1TextField.text(), self.audioCard2TextField.text(), self.audioCard3TextField.text()],
+                'decks': self.audioDecksSelection.currentIndex(),
+                'lock': self.locking.isChecked(),
+                'speed': self.speed.isChecked(),
+                'playlists': self.playlists}
         with open('config.pkl', 'wb') as file:
-            pickle.dump(self.playlists, file)
+            pickle.dump(config, file)
 
-    def playlistLoad(self):
+    def configLoad(self):
         if os.path.exists('config.pkl'):
             with open('config.pkl', 'rb') as file:
-                self.playlists = pickle.load(file)
+                config = pickle.load(file)
+        else:
+            config = {'medium': 0,
+                    'api': 0,
+                    'hw-devices': ["", "", ""],
+                    'decks': 1,
+                    'lock': True,
+                    'speed': True,
+                    'playlists': self.playlists}
+        
+        # Set Audio Decks
+        self.audioDecksSelection.setCurrentIndex(config['decks'])
+        
+        # Set Devices Text Fields
+        for i, j in enumerate([self.audioCard1TextField, self.audioCard2TextField, self.audioCard3TextField]):
+            j.setText(config['hw-devices'][i])
+
+        # Set Medium
+        self.mediumSelection.setCurrentIndex(config['medium'])
+
+        # Set API
+        self.audioAPISelection.setCurrentIndex(config['api'])
+
+        # Locking and Speed
+        self.locking.setChecked(config['lock'])
+        self.speed.setChecked(config['speed'])
+
+        # Set Playlists
+        self.playlists = config['playlists']
         self.updatePlaylistsList()
+
+        # Select all Playlists
         for i in range(0, self.playlistsList.count()):
             self.playlistsList.item(i).setSelected(True)
 
@@ -188,7 +228,7 @@ class PvcGui(QDialog):
         indices = [x.row() for x in self.playlistsList.selectedIndexes()]
         for i in indices[::-1]:
             self.playlists.pop(i)
-        self.writeConfig()
+        self.configWrite()
         self.updatePlaylistsList()
 
     def audioHWField(self):

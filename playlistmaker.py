@@ -71,7 +71,7 @@ class PlaylistMaker(QDialog):
 
     def tunaSelector(self):
         self.tunaSelect = QFileDialog()
-        self.tunas = self.tunaSelect.getOpenFileNames()
+        self.tunas = self.tunaSelect.getOpenFileNames(filter="Music (*.mp3 *.wav)")
         self.tunaList.addItems(self.tunas[0])        
 
     def tunaDeleter(self):
@@ -85,12 +85,12 @@ class PlaylistMaker(QDialog):
             self.audiofile = eyed3.load(filepath)
             artistTag = self.audiofile.tag.artist
             titleTag = self.audiofile.tag.title
-            commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
+            commentTag = self.audiofile.tag.comments[0].text
         elif filepath.endswith(".wav"):
             filename = filepath.split("/")[-1].split(".w")[0]
             artistTag = filename.split(" - ")[0]
             titleTag = filename.split(" - ")[1]
-            commentTag = self.audiofile.tag.comments[0].text # <<- that's weird, isn't it?!
+            commentTag = self.audiofile.tag.comments[0].text
         
         firstColumn = []
         firstBoxSplitted = self.structureBox1.displayText().split('%')

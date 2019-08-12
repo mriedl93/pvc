@@ -20,33 +20,48 @@ class PvcGui(QDialog):
         self.playlists = []
 
         # Audio API
-        self.audioComboBox = QComboBox()
-        self.audioComboBox.addItems(['Jack', 'ALSA', 'Dummy'])
-        audioLabel = QLabel('Audio API')
-        audioLabel.setBuddy(self.audioComboBox)
-        audioDecksLabel = QLabel('Nr. of Decks')
-        self.audioDecks = QComboBox()
-        self.audioDecks.addItems(['1', '2', '3'])
-        self.audioDecks.setCurrentIndex(1)
+        self.audioAPISelection = QComboBox()
+        self.audioAPISelection.addItems(['Jack', 'ALSA', 'Dummy'])
+        self.audioAPISelection.currentIndexChanged.connect(self.audioHWField)
+        self.audioAPISelectionLabel = QLabel('Audio API')
+        self.audioAPISelectionLabel.setBuddy(self.audioAPISelection)
+        self.audioDecksLabel = QLabel('Nr. of Decks')
+        self.audioDecksSelection = QComboBox()
+        self.audioDecksSelection.addItems(['1', '2', '3'])
+        self.audioDecksSelection.setCurrentIndex(1)
+        self.audioDecksSelection.currentIndexChanged.connect(self.audioHWField)
+
+        self.audioCardLayout = QHBoxLayout()
+        self.audiocardLabel = QLabel('HW Device:')
+        self.audioCard1TextField = QLineEdit()
+        self.audioCard2TextField = QLineEdit()
+        self.audioCard3TextField = QLineEdit()
+        self.audioCardLayout.addWidget(self.audiocardLabel)
+        self.audioCardLayout.addWidget(self.audioCard1TextField)
+        self.audioCardLayout.addWidget(self.audioCard2TextField)
+        self.audioCardLayout.addWidget(self.audioCard3TextField)
+
+
 
         # Medium
-        self.medium = QComboBox()
-        mediumLabel = QLabel('Medium')
-        self.medium.addItems(['serato_2a', 'serato_2b', 'serato_cd', 'traktor_a', 'traktor_b', 'mixvibes_v2', 'mixvibes_7inch'])
+        self.mediumSelection = QComboBox()
+        self.mediumSelectionLabel = QLabel('Medium')
+        self.mediumSelection.addItems(['serato_2a', 'serato_2b', 'serato_cd', 'traktor_a', 'traktor_b', 'mixvibes_v2', 'mixvibes_7inch'])
 
-        audioBox = QVBoxLayout()
-        audioAPI = QHBoxLayout()
-        audioAPI.addWidget(audioLabel)
-        audioAPI.addWidget(self.audioComboBox)
-        mediumBox = QHBoxLayout()
-        mediumBox.addWidget(mediumLabel)
-        mediumBox.addWidget(self.medium)
-        audioDecksBox = QHBoxLayout()
-        audioDecksBox.addWidget(audioDecksLabel)
-        audioDecksBox.addWidget(self.audioDecks)
-        audioBox.addLayout(audioAPI)
-        audioBox.addLayout(mediumBox)
-        audioBox.addLayout(audioDecksBox)
+        self.audioLayout = QVBoxLayout()
+        self.audioAPILayout = QHBoxLayout()
+        self.audioAPILayout.addWidget(self.audioAPISelectionLabel)
+        self.audioAPILayout.addWidget(self.audioAPISelection)
+        self.mediumLayout = QHBoxLayout()
+        self.mediumLayout.addWidget(self.mediumSelectionLabel)
+        self.mediumLayout.addWidget(self.mediumSelection)
+        self.audioDecksLayout = QHBoxLayout()
+        self.audioDecksLayout.addWidget(self.audioDecksLabel)
+        self.audioDecksLayout.addWidget(self.audioDecksSelection)
+        self.audioLayout.addLayout(self.audioAPILayout)
+        self.audioLayout.addLayout(self.audioCardLayout)
+        self.audioLayout.addLayout(self.mediumLayout)
+        self.audioLayout.addLayout(self.audioDecksLayout)
 
         # THRU
         self.thruLabel = QLabel('THRU Switch\nfor Traktro Audio 6')
@@ -59,6 +74,7 @@ class PvcGui(QDialog):
         self.speed = QCheckBox('45 rpm')
         self.speed.setChecked(True)
 
+        # Locking
         self.locking = QCheckBox('Deck Locking')
         self.locking.setChecked(True)
 
@@ -115,7 +131,7 @@ class PvcGui(QDialog):
         playlistsBox.addWidget(playlistDeleteButton)
 
         settingsLayout = QVBoxLayout()
-        settingsLayout.addLayout(audioBox)
+        settingsLayout.addLayout(self.audioLayout)
         settingsLayout.addLayout(secondBox)
 
         self.startupcmd = QLineEdit()
@@ -133,6 +149,7 @@ class PvcGui(QDialog):
         layout.addLayout(thruBox4, 1, 1)
         layout.addLayout(self.startupcmdBox, 2, 0, 1, 2)
 
+        self.audioHWField()
         start.clicked.connect(self.run)
         verbose.clicked.connect(partial(self.run, True))
         self.playlistLoad()
@@ -158,7 +175,6 @@ class PvcGui(QDialog):
         for i in range(0, self.playlistsList.count()):
             self.playlistsList.item(i).setSelected(True)
 
-
     def playlistCreator(self):
         self.playlistMaker = playlistmaker.PlaylistMaker()
         self.playlistMaker.show()
@@ -174,6 +190,24 @@ class PvcGui(QDialog):
             self.playlists.pop(i)
         self.writeConfig()
         self.updatePlaylistsList()
+
+    def audioHWField(self):
+        """Handles the HW Device Text fields"""
+        deck_nr = int(self.audioDecksSelection.currentText())
+        audioCardField = [self.audioCard1TextField, self.audioCard2TextField, self.audioCard3TextField]
+
+        if self.audioAPISelection.currentIndex() == 1:
+            self.setAllNegative()
+            for i in range(deck_nr):
+                audioCardField[i].setEnabled(True)
+        else:
+            self.setAllNegative()
+        
+    def setAllNegative(self):
+        """Disables all Hardware Device text field when Dummy or JACK are selected"""
+        self.audioCard1TextField.setEnabled(False)
+        self.audioCard2TextField.setEnabled(False)
+        self.audioCard3TextField.setEnabled(False)
 
     def thruSwitch(self, channel):
         """ Switches THRU to channel for Traktor Audio 6 """
@@ -220,24 +254,37 @@ class PvcGui(QDialog):
         else:
             lock = '-u'
 
-        if self.audioComboBox.currentText() == 'Jack':
-            if self.audioDecks.currentIndex() == 0:
+        ### JACK API
+        if self.audioAPISelection.currentText() == 'Jack':
+            if self.audioDecksSelection.currentIndex() == 0:
                 api = '-j deckA'
-            elif self.audioDecks.currentIndex() == 1:
+            elif self.audioDecksSelection.currentIndex() == 1:
                 api = '-j deckA -j deckB'
             else:
                 api = '-j deckA -j deckB -j deckC'
-        elif self.audioComboBox.currentText() == 'Dummy':
+
+        ### DUMMY
+        elif self.audioAPISelection.currentText() == 'Dummy':
             api = '--dummy'
+
+        ### ALSA API
         else:
-            print('ALSA')
+            deck_nr = int(self.audioDecksSelection.currentText())
+            audioDevices = [self.audioCard1TextField, self.audioCard2TextField, self.audioCard3TextField]
+            api = []
+
+            for i in range(deck_nr):
+                api.append('-a')
+                api.append(audioDevices[i].text())
+            
+            api = ' '.join(api)
         
         runPlaylists = []
         for i in self.playlistsList.selectedItems():
             runPlaylists.append('-l')
             runPlaylists.append(i.text())
         
-        startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.medium.currentText(), api)
+        startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.mediumSelection.currentText(), api)
         if verbose:
             self.startupcmd.setText(startcmd)
         else:

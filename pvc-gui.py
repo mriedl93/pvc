@@ -19,7 +19,7 @@ class PvcGui(QDialog):
         self.file = None
         self.playlists = []
 
-        # Audio API
+        # Audio API & Decks
         self.audioAPISelection = QComboBox()
         self.audioAPISelection.addItems(['Jack', 'ALSA', 'Dummy'])
         self.audioAPISelection.currentIndexChanged.connect(self.audioHWField)
@@ -28,25 +28,80 @@ class PvcGui(QDialog):
         self.audioDecksLabel = QLabel('Nr. of Decks')
         self.audioDecksSelection = QComboBox()
         self.audioDecksSelection.addItems(['1', '2', '3'])
-        #self.audioDecksSelection.setCurrentIndex(1)
         self.audioDecksSelection.currentIndexChanged.connect(self.audioHWField)
 
-        self.audioCardLayout = QHBoxLayout()
+        # HW Devices
         self.audiocardLabel = QLabel('HW Device:')
         self.audioCard1TextField = QLineEdit()
         self.audioCard2TextField = QLineEdit()
         self.audioCard3TextField = QLineEdit()
-        self.audioCardLayout.addWidget(self.audiocardLabel)
-        self.audioCardLayout.addWidget(self.audioCard1TextField)
-        self.audioCardLayout.addWidget(self.audioCard2TextField)
-        self.audioCardLayout.addWidget(self.audioCard3TextField)
-
-
 
         # Medium
         self.mediumSelection = QComboBox()
         self.mediumSelectionLabel = QLabel('Medium')
         self.mediumSelection.addItems(['serato_2a', 'serato_2b', 'serato_cd', 'traktor_a', 'traktor_b', 'mixvibes_v2', 'mixvibes_7inch'])
+
+        # THRU
+        self.thruLabel = QLabel('THRU Switch\nfor Traktro Audio 6')
+        self.channelAThru = QPushButton('THRU A')
+        self.channelAThru.clicked.connect(partial(self.thruSwitch, 'a'))
+        self.channelBThru = QPushButton('THRU B')
+        self.channelBThru.clicked.connect(partial(self.thruSwitch, 'b'))
+
+        if self.checkThruState('a'):
+            self.channelAState = QLabel("CHANNEL A THRU")
+        else:
+            self.channelAState = QLabel("")
+        if self.checkThruState('b'):
+            self.channelBState = QLabel("CHANNEL B THRU")
+        else:
+            self.channelBState = QLabel("")
+
+        # 33 45
+        self.speed = QCheckBox('45 rpm')
+        self.speed.setChecked(True)
+
+        # Locking
+        self.locking = QCheckBox('Deck Locking')
+        self.locking.setChecked(True)
+
+        # Buttons
+        self.start = QPushButton('Start xwax')
+        self.save = QPushButton('Save Settings')
+        self.verbose = QPushButton('Show Command')
+
+
+        # Playlists
+        self.playlistsList = QListWidget()
+        self.playlistsList.setSelectionMode(QAbstractItemView.MultiSelection)
+        self.playlistsLabel = QLabel('Select playlists')
+        self.playlistAppenButton = QPushButton('Add Playlist')
+        self.playlistAppenButton.clicked.connect(self.fileSelection)
+        self.playlistCreateBuutton = QPushButton('Create Playlist')
+        self.playlistCreateBuutton.clicked.connect(self.playlistCreator)
+        self.playlistDeleteButton = QPushButton('Delete Playlist')
+        self.playlistDeleteButton.clicked.connect(self.playlistDelete)
+
+
+        # startup
+        self.startupcmd = QLineEdit()
+        self.startupcmd.setReadOnly(True)
+        self.startupcmdLabel = QLabel('Generated Startup Command')
+
+        self.audioHWField()
+        self.start.clicked.connect(self.run)
+        self.save.clicked.connect(self.configWrite)
+        self.verbose.clicked.connect(partial(self.run, True))
+        self.configLoad()
+        self.setLayout(self.layoutUI())
+        self.setWindowTitle('pvc - Simple xwax starterscript - GUI Version')
+
+    def layoutUI(self):
+        self.audioCardLayout = QHBoxLayout()
+        self.audioCardLayout.addWidget(self.audiocardLabel)
+        self.audioCardLayout.addWidget(self.audioCard1TextField)
+        self.audioCardLayout.addWidget(self.audioCard2TextField)
+        self.audioCardLayout.addWidget(self.audioCard3TextField)
 
         self.audioLayout = QVBoxLayout()
         self.audioAPILayout = QHBoxLayout()
@@ -63,101 +118,51 @@ class PvcGui(QDialog):
         self.audioLayout.addLayout(self.mediumLayout)
         self.audioLayout.addLayout(self.audioDecksLayout)
 
-        # THRU
-        self.thruLabel = QLabel('THRU Switch\nfor Traktro Audio 6')
-        self.channelAThru = QPushButton('THRU A')
-        self.channelAThru.clicked.connect(partial(self.thruSwitch, 'a'))
-        self.channelBThru = QPushButton('THRU B')
-        self.channelBThru.clicked.connect(partial(self.thruSwitch, 'b'))
+        self.secondBox = QHBoxLayout()
+        self.secondBox.addWidget(self.speed)
+        self.secondBox.addWidget(self.locking)
 
-        # 33 45
-        self.speed = QCheckBox('45 rpm')
-        self.speed.setChecked(True)
+        self.thirdBox = QVBoxLayout()
+        self.thirdBox.addWidget(self.start)
+        self.thirdBox.addWidget(self.save)
+        self.thirdBox.addWidget(self.verbose)
 
-        # Locking
-        self.locking = QCheckBox('Deck Locking')
-        self.locking.setChecked(True)
-
-        secondBox = QHBoxLayout()
-        secondBox.addWidget(self.speed)
-        secondBox.addWidget(self.locking)
-
-        # Buttons
-        start = QPushButton('Start xwax')
-        save = QPushButton('Save Settings')
-        verbose = QPushButton('Show Command')
-
-        thirdBox = QVBoxLayout()
-        thirdBox.addWidget(start)
-        thirdBox.addWidget(save)
-        thirdBox.addWidget(verbose)
-
-        #thruBox = QGroupBox("THRU on Traktor Audio 6")
-        thruBox2 = QHBoxLayout()
-        thruBox2.addWidget(self.channelAThru)
-        thruBox2.addWidget(self.channelBThru)
-        if self.checkThruState('a'):
-            channelAState = QLabel("CHANNEL A THRU")
-        else:
-            channelAState = QLabel("")
-        if self.checkThruState('b'):
-            channelBState = QLabel("CHANNEL B THRU")
-        else:
-            channelBState = QLabel("")
-        thruBox3 = QHBoxLayout()
-        thruBox3.addWidget(channelAState)
-        thruBox3.addWidget(channelBState)
-        thruBox4 = QVBoxLayout()
-        thruBox4.addStretch()
-        thruBox4.addLayout(thruBox3)
-        thruBox4.addLayout(thruBox2)
-        # thruBox.setLayout(thruBox4)
+        self.thruBox2 = QHBoxLayout()
+        self.thruBox2.addWidget(self.channelAThru)
+        self.thruBox2.addWidget(self.channelBThru)
+        self.thruBox3 = QHBoxLayout()
+        self.thruBox3.addWidget(self.channelAState)
+        self.thruBox3.addWidget(self.channelBState)
+        self.thruBox4 = QVBoxLayout()
+        self.thruBox4.addStretch()
+        self.thruBox4.addLayout(self.thruBox3)
+        self.thruBox4.addLayout(self.thruBox2)
+        # thruBox.setLayout(self.thruBox4)
         #thruBox.setAlignment(Qt.AlignTop)
 
-        # Playlists
-        self.playlistsList = QListWidget()
-        self.playlistsList.setSelectionMode(QAbstractItemView.MultiSelection)
-        playlistsLabel = QLabel('Select playlists')
-        playlistAppenButton = QPushButton('Add Playlist')
-        playlistAppenButton.clicked.connect(self.fileSelection)
-        playlistCreateBuutton = QPushButton('Create Playlist')
-        playlistCreateBuutton.clicked.connect(self.playlistCreator)
-        playlistDeleteButton = QPushButton('Delete Playlist')
-        playlistDeleteButton.clicked.connect(self.playlistDelete)
+        self.playlistsBox = QVBoxLayout()
+        self.playlistsBox.addWidget(self.playlistsLabel)
+        self.playlistsBox.addWidget(self.playlistsList)
+        self.playlistsBox.addWidget(self.playlistAppenButton)
+        self.playlistsBox.addWidget(self.playlistCreateBuutton)
+        self.playlistsBox.addWidget(self.playlistDeleteButton)
 
-        playlistsBox = QVBoxLayout()
-        playlistsBox.addWidget(playlistsLabel)
-        playlistsBox.addWidget(self.playlistsList)
-        playlistsBox.addWidget(playlistAppenButton)
-        playlistsBox.addWidget(playlistCreateBuutton)
-        playlistsBox.addWidget(playlistDeleteButton)
+        self.settingsLayout = QVBoxLayout()
+        self.settingsLayout.addLayout(self.audioLayout)
+        self.settingsLayout.addLayout(self.secondBox)
 
-        settingsLayout = QVBoxLayout()
-        settingsLayout.addLayout(self.audioLayout)
-        settingsLayout.addLayout(secondBox)
-
-        self.startupcmd = QLineEdit()
-        self.startupcmd.setReadOnly(True)
-        self.startupcmdLabel = QLabel('Generated Startup Command')
         self.startupcmdBox = QVBoxLayout()
         self.startupcmdBox.addWidget(self.startupcmdLabel)
         self.startupcmdBox.addWidget(self.startupcmd)
 
-        # Main Layout
-        layout = QGridLayout()
-        layout.addLayout(settingsLayout, 0, 0)
-        layout.addLayout(thirdBox, 0, 1)
-        layout.addLayout(playlistsBox, 1, 0)
-        layout.addLayout(thruBox4, 1, 1)
-        layout.addLayout(self.startupcmdBox, 2, 0, 1, 2)
+        self.layout = QGridLayout()
+        self.layout.addLayout(self.settingsLayout, 0, 0)
+        self.layout.addLayout(self.thirdBox, 0, 1)
+        self.layout.addLayout(self.playlistsBox, 1, 0)
+        self.layout.addLayout(self.thruBox4, 1, 1)
+        self.layout.addLayout(self.startupcmdBox, 2, 0, 1, 2)
 
-        self.audioHWField()
-        start.clicked.connect(self.run)
-        save.clicked.connect(self.configWrite)
-        verbose.clicked.connect(partial(self.run, True))
-        self.configLoad()
-        self.setLayout(layout)
-        self.setWindowTitle('pvc - Simple xwax starterscript - GUI Version')
+        return self.layout
 
     def fileSelection(self):
         fileDialoge = QFileDialog()
@@ -326,11 +331,15 @@ class PvcGui(QDialog):
         
         startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.mediumSelection.currentText(), api)
         if verbose:
+            print("Startup-command:  " + startcmd)
             self.startupcmd.setText(startcmd)
         else:
-            self.startupcmd.setText(startcmd)
-            subprocess.Popen(shlex.split(startcmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
+            try:
+                print("Starting xwax")
+                self.startupcmd.setText(startcmd)
+                subprocess.Popen(shlex.split(startcmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            except:
+                print("Couldn't start xwax")
 
 
 if __name__ == '__main__':

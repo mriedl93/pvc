@@ -72,7 +72,7 @@ class PlaylistMaker(QDialog):
     def tunaSelector(self):
         self.tunaSelect = QFileDialog()
         self.tunas = self.tunaSelect.getOpenFileNames(filter="Music (*.mp3 *.wav)")
-        self.tunaList.addItems(self.tunas[0])        
+        self.tunaList.addItems(self.tunas[0])
 
     def tunaDeleter(self):
         tunas = [x.row() for x in self.tunaList.selectedIndexes()]
@@ -91,7 +91,7 @@ class PlaylistMaker(QDialog):
             artistTag = filename.split(" - ")[0]
             titleTag = filename.split(" - ")[1]
             commentTag = self.audiofile.tag.comments[0].text
-        
+
         firstColumn = []
         firstBoxSplitted = self.structureBox1.displayText().split('%')
 
@@ -107,7 +107,7 @@ class PlaylistMaker(QDialog):
 
         secondColumn = []
         secondBoxSplitted = self.structureBox2.displayText().split('%')
-        
+
         for i in secondBoxSplitted:
             if i == '':
                 continue
@@ -117,7 +117,7 @@ class PlaylistMaker(QDialog):
                 secondColumn.append(i.replace('A', '{}'.format(artistTag)))
             elif i[0] == 'T':
                 secondColumn.append(i.replace('T', '{}'.format(titleTag)))
-            
+
         string = filepath + "\t" + ''.join(firstColumn) + "\t" + ''.join(secondColumn)
         return string
 
@@ -132,10 +132,10 @@ class PlaylistMaker(QDialog):
         for i, j in enumerate(writeStuff):
             writeStuff[i] = self.tunaPreparator(j)
         writeStuff.append('')
-        
+
         with open(filename, 'w') as file:
             file.write('\n'.join(writeStuff))
-    
+
     def loadPlaylist(self):
 
         filename, other_crap = QFileDialog().getOpenFileName()

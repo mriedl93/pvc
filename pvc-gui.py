@@ -138,7 +138,7 @@ class PvcGui(QDialog):
         self.thruBox4.addLayout(self.thruBox3)
         self.thruBox4.addLayout(self.thruBox2)
         # thruBox.setLayout(self.thruBox4)
-        #thruBox.setAlignment(Qt.AlignTop)
+        # thruBox.setAlignment(Qt.AlignTop)
 
         self.playlistsBox = QVBoxLayout()
         self.playlistsBox.addWidget(self.playlistsLabel)
@@ -165,13 +165,19 @@ class PvcGui(QDialog):
         return self.layout
 
     def fileSelection(self):
+        """
+        Displays the file selection dialog.
+        """
         fileDialoge = QFileDialog()
-        self.file = fileDialoge.getOpenFileName(self, 'Open File', '/home/markus/Musik')
+        self.file = fileDialoge.getOpenFileName(self, 'Open File', '/home/markus/Musik') # change this!!!
         self.playlistsList.addItem(self.file[0])
         self.playlists.append(self.file[0])
         self.configWrite() 
 
     def configWrite(self):
+        """
+        Writes Settings to a Pickle-File
+        """
         config = {'medium': self.mediumSelection.currentIndex(),
                 'api': self.audioAPISelection.currentIndex(),
                 'hw-devices': [self.audioCard1TextField.text(), self.audioCard2TextField.text(), self.audioCard3TextField.text()],
@@ -183,6 +189,11 @@ class PvcGui(QDialog):
             pickle.dump(config, file)
 
     def configLoad(self):
+        """
+        Loads config from Pickle file and sets all settings accordingly.
+        If no config file has been found a standard config is loaded instead.
+        """
+
         if os.path.exists('config.pkl'):
             with open('config.pkl', 'rb') as file:
                 config = pickle.load(file)
@@ -194,10 +205,10 @@ class PvcGui(QDialog):
                     'lock': True,
                     'speed': True,
                     'playlists': self.playlists}
-        
+
         # Set Audio Decks
         self.audioDecksSelection.setCurrentIndex(config['decks'])
-        
+
         # Set Devices Text Fields
         for i, j in enumerate([self.audioCard1TextField, self.audioCard2TextField, self.audioCard3TextField]):
             j.setText(config['hw-devices'][i])
@@ -221,15 +232,18 @@ class PvcGui(QDialog):
             self.playlistsList.item(i).setSelected(True)
 
     def playlistCreator(self):
+        """Initiates an instance of the Playlist Maker"""
         self.playlistMaker = playlistmaker.PlaylistMaker()
         self.playlistMaker.show()
 
     def updatePlaylistsList(self):
+        """Updates the list of playlists"""
         self.playlistsList.clear()
         for i in self.playlists:
             self.playlistsList.addItem(i)
 
     def playlistDelete(self):
+        """deletes playlist from playlist-list"""
         indices = [x.row() for x in self.playlistsList.selectedIndexes()]
         for i in indices[::-1]:
             self.playlists.pop(i)
@@ -247,7 +261,7 @@ class PvcGui(QDialog):
                 audioCardField[i].setEnabled(True)
         else:
             self.setAllNegative()
-        
+
     def setAllNegative(self):
         """Disables all Hardware Device text field when Dummy or JACK are selected"""
         self.audioCard1TextField.setEnabled(False)
@@ -281,19 +295,19 @@ class PvcGui(QDialog):
             grep2 = subprocess.check_output(["grep", "-A", "3", "'Direct Thru Channel {}".format(channel.upper())], stdin=am_status.stdout)
 
             thru_active = re.search("\[on\]", str(grep2))  # returns boolean
-            
+
             return [thru_active, output]
         except:
             print("No Soundcard found!")
 
 
     def run(self, verbose=False):
-        
+
         if self.speed.isChecked():
             rpm = '-45'
         else:
             rpm = '-33'
-        
+
         if self.locking.isChecked():
             lock = '-c'
         else:
@@ -321,14 +335,14 @@ class PvcGui(QDialog):
             for i in range(deck_nr):
                 api.append('-a')
                 api.append(audioDevices[i].text())
-            
+
             api = ' '.join(api)
-        
+
         runPlaylists = []
         for i in self.playlistsList.selectedItems():
             runPlaylists.append('-l')
             runPlaylists.append(i.text())
-        
+
         startcmd = "xwax {} {} -s /bin/cat {} -t {} {}".format(lock, rpm, ' '.join(runPlaylists), self.mediumSelection.currentText(), api)
         if verbose:
             print("Startup-command:  " + startcmd)
